@@ -1,0 +1,6 @@
+; SMModLoader.dll is installed as vcruntime140_1.dll, which ScrapMechanic.exe loads from its own
+; folder: every export of the original is forwarded to the renamed vcruntime140_1_orig.dll.
+EXPORTS
+    __CxxFrameHandler4 = vcruntime140_1_orig.__CxxFrameHandler4
+    __NLG_Dispatch2 = vcruntime140_1_orig.__NLG_Dispatch2
+    __NLG_Return2 = vcruntime140_1_orig.__NLG_Return2

@@ -1,0 +1,131 @@
+=====================================================================
+NEXUS MODS PAGE - copy each block into the matching field of the form
+=====================================================================
+
+---------------------------------------------------------------------
+MOD NAME
+---------------------------------------------------------------------
+FastPhysics - less lag from big creations
+
+---------------------------------------------------------------------
+VERSION
+---------------------------------------------------------------------
+1.0.0
+
+---------------------------------------------------------------------
+CATEGORY (suggestion)
+---------------------------------------------------------------------
+Utilities  (or Performance / Bug Fixes, if the game page has them)
+
+---------------------------------------------------------------------
+BRIEF OVERVIEW / SUMMARY (max 350 characters)
+---------------------------------------------------------------------
+Removes most of the physics lag caused by big creations (mechs, suspension builds, anything with many bearings and parts pressing together) by replacing the game's exact constraint solver with a 5-10x faster implementation of the same algorithm. Same physics, same behaviour, higher frame rate. One-click install.
+
+---------------------------------------------------------------------
+DESCRIPTION (BBCode)
+---------------------------------------------------------------------
+[center][size=6][b][color=#f7cb5d]FastPhysics[/color][/b][/size][/center]
+
+[b]Less lag from big creations. Same physics.[/b]
+
+Ever noticed the game stuttering as soon as a big walking mech, a flying machine built on suspensions or a tall pile of parts is nearby? That is not your graphics card. Scrap Mechanic solves the joints (bearings, pistons) and the contacts of a creation with an [i]exact[/i] solver, and on a large creation that one routine alone takes 10 to 30 milliseconds every physics tick, on a single core. The frame rate drops no matter how strong your PC is.
+
+FastPhysics replaces that one routine with a faster implementation of the [i]same[/i] algorithm. The result is checked and corrected on every tick, so the physics is the same; it is just computed about 5 to 10 times faster.
+
+[line]
+
+[size=4][b][color=#f7cb5d]What it does[/color][/b][/size]
+
+[list]
+[*]Big creations cost much less physics time. On a 45-part workshop mech the solver went from 10-14 ms to 1-3 ms per tick; with six mechs in view the physics step went from 13 ms to 7.6 ms and the stutter was gone; ten mechs run at 12 ms per tick, where the game's own solver needed 7-44 ms for every single mech.
+[*]Creations behave exactly as before: nothing gets softer, nothing sinks, nothing wobbles. The solver computes the same forces with the same method (Dantzig's method from the Bullet physics library the game is built on), only faster.
+[*]Nothing to configure. Install it and play.
+[/list]
+
+[size=4][b][color=#f7cb5d]What it does not do[/color][/b][/size]
+
+[list]
+[*]Small cars, houses and simple builds never reach the slow part of the engine, so they do not get faster.
+[*]Lag from logic, scripts, lots of separate creations, farming or rendering is not touched.
+[*]It does not change physics quality, gravity, speed or anything you can see.
+[/list]
+
+[line]
+
+[size=4][b][color=#f7cb5d]Install[/color][/b][/size]
+
+[list=1]
+[*]Close the game.
+[*]Extract the archive and run [b]Install.bat[/b]. The game is found through Steam; if it is somewhere unusual, drag its folder onto Install.bat or pass it as an argument.
+[*]Start the game.
+[/list]
+
+Install.bat puts [i]FastPhysics.dll[/i] and [i]FastPhysics.ini[/i] into Release\DLLModules and sets up the small SM Mod Loader (a vcruntime140_1.dll that loads the DLLs from that folder; the original is kept) if none of my other mods installed it already. If you use the SM-DLL-Injector, the mod goes into its DLLModules and nothing else is touched.
+
+[b]Uninstall:[/b] Uninstall.bat, or "Verify integrity of game files" in Steam.
+
+[size=4][b][color=#f7cb5d]Requirements[/color][/b][/size]
+
+[list]
+[*]Scrap Mechanic 1.0 (Steam, 64-bit). Tested with 1.0.6.
+[*]A CPU with AVX2 and FMA (any Intel from 2013 or AMD from 2015 on). Older CPUs: the mod stays inactive and the game runs as without it.
+[*]Windows 10 or 11.
+[/list]
+
+[size=4][b][color=#f7cb5d]Multiplayer[/color][/b][/size]
+
+The physics runs on the host, so the host needs the mod. Clients can have it too; nothing is sent differently over the network.
+
+[size=4][b][color=#f7cb5d]Settings[/color][/b][/size]
+
+Release\DLLModules\FastPhysics.ini: [i]Enabled[/i] (turn the mod off without uninstalling), [i]WarmStart[/i] (keep it on), [i]LogIntervalSeconds[/i], and a few troubleshooting switches explained in the file. The log (FastPhysics.log) shows how many solver problems were handled, their size and timing, and how many went back to the game's solver (normally none).
+
+[size=4][b][color=#f7cb5d]Compatibility[/color][/b][/size]
+
+Works with my other mods (ComfortLogic, Chest Hotkeys, Time Stop in Pause); they share the loader. It changes one function of the physics engine and nothing in the game's scripts or files, so it does not conflict with Lua mods or Workshop content. Survival, Challenge and Creative alike.
+
+[size=4][b][color=#f7cb5d]See it[/color][/b][/size]
+
+The same scene, the same camera path, two workshop mechs. Without the mod:
+[img]https://staticdelivery.nexusmods.com/mods/3298/images/63/63-1792198110-1178900572.gif[/img]
+
+With FastPhysics:
+[img]https://staticdelivery.nexusmods.com/mods/3298/images/63/63-1792198123-490606546.gif[/img]
+
+[size=4][b][color=#f7cb5d]How it works (for the curious)[/color][/b][/size]
+
+The game's physics (Bullet) splits the world into islands of touching bodies and solves each island's constraints with a mixed linear complementarity solver, Dantzig's method. Its cost grows with the cube of the number of constraint rows, and a mech with 50 bearings and 500 contact points has about 600 rows. The replacement is the same algorithm with AVX2 vector instructions, the joint rows factorised as one block, and a verified warm start from the previous tick's contact set. When it cannot solve a problem it hands that tick back to the game's own solver. Source code is in the optional file; the solver is derived from Bullet's btDantzigLCP (zlib licence, originally from the Open Dynamics Engine).
+
+[line]
+
+[size=4][b][color=#f7cb5d]My other mods[/color][/b][/size]
+
+[list]
+[*][url=https://www.nexusmods.com/scrapmechanic/mods/64][b]Desync Fix[/b][/url] - less lag and desync in multiplayer for the players who join: the client applies the host's updates as they arrive.
+[*][url=https://www.nexusmods.com/scrapmechanic/mods/60][b]ComfortLogic[/b][/url] - move logic parts without losing their wiring, copy and paste controller settings, one-click disconnect.
+[*][url=https://www.nexusmods.com/scrapmechanic/mods/59][b]Time Stop in Pause[/b][/url] - a real pause for single player: the whole world stops while the Esc menu is open.
+[*][url=https://www.nexusmods.com/scrapmechanic/mods/61][b]Chest Hotkeys[/b][/url] - keyboard shortcuts for the chest window: store similar items, take everything, sort.
+[*][url=https://www.nexusmods.com/scrapmechanic/mods/62][b]Trash Can[/b][/url] - a craftable trash can for Survival that destroys its contents on a logic signal.
+[/list]
+
+---------------------------------------------------------------------
+FILES - MAIN FILE
+---------------------------------------------------------------------
+Name:        FastPhysics
+Version:     1.0.0
+Description: The mod with its one-click installer (Install.bat / Uninstall.bat). Extract and run Install.bat.
+File:        dist\FastPhysics-1.0.0.zip
+
+---------------------------------------------------------------------
+FILES - OPTIONAL FILE
+---------------------------------------------------------------------
+Name:        FastPhysics source code
+Version:     1.0.0
+Description: C++ source of the mod, the solver, the self-test and the installer scripts. Builds with Visual Studio (build.bat).
+File:        dist\FastPhysics-1.0.0-source.zip
+
+---------------------------------------------------------------------
+CHANGELOG
+---------------------------------------------------------------------
+1.0.0 - first release.

@@ -1,0 +1,10 @@
+bin/
+build/
+dist/
+*.bak
+*.orig
+*.log
+docs/nexus/*.gif
+docs/nexus/*.mp4
+SMModLoader/bin/
+SMModLoader/build/

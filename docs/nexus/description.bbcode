@@ -68,7 +68,7 @@ With FastPhysics:
 
 [size=4][b][color=#f7cb5d]How it works (for the curious)[/color][/b][/size]
 
-The game's physics (Bullet) splits the world into islands of touching bodies and solves each island's constraints with a mixed linear complementarity solver, Dantzig's method. Its cost grows with the cube of the number of constraint rows, and a mech with 50 bearings and 500 contact points has about 600 rows. The replacement is the same algorithm with AVX2 vector instructions, the joint rows factorised as one block, and a verified warm start from the previous tick's contact set. When it cannot solve a problem it hands that tick back to the game's own solver. Source code is in the optional file; the solver is derived from Bullet's btDantzigLCP (zlib licence, originally from the Open Dynamics Engine).
+The game's physics (Bullet) splits the world into islands of touching bodies and solves each island's constraints with a mixed linear complementarity solver, Dantzig's method. Its cost grows with the cube of the number of constraint rows, and a mech with 50 bearings and 500 contact points has about 600 rows. The replacement is the same algorithm with AVX2 vector instructions, the joint rows factorised as one block, and a verified warm start from the previous tick's contact set. When it cannot solve a problem it hands that tick back to the game's own solver. Source code: [url=https://github.com/drake1ch/FastPhysics]github.com/drake1ch/FastPhysics[/url] (also in the optional file); the solver is derived from Bullet's btDantzigLCP (zlib licence, originally from the Open Dynamics Engine).
 
 [line]
 

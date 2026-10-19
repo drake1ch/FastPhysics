@@ -199,6 +199,11 @@ void ImageTests(const wchar_t* exePath) {
     Check(FindVTable(".?AVbtMLCPSolverInterface@@") != nullptr, "btMLCPSolverInterface (the solver's base class) found");
     void** world = FindVTable(".?AVTickDynamicsWorld@@");
     Check(world != nullptr, "TickDynamicsWorld (the game's dynamics world) found: this is Scrap Mechanic's physics");
+    uint8_t* sweep = FindUnique(g_text, kProbeSweepSig, sizeof kProbeSweepSig);
+    Check(sweep != nullptr, "reflection probe placement sweep: signature found exactly once");
+    if (sweep) Check(Read<uint32_t>(sweep + 10) == 0x42000000 && Read<uint32_t>(sweep + 18) == 0x42000000, "both radius immediates are 32.0f");
+    uint8_t* nav = FindUnique(g_text, kNavMeshSig, sizeof kNavMeshSig);
+    Check(nav != nullptr, "navmesh duplicate-box search: signature found exactly once");
     FreeLibrary(exe);
 }
 

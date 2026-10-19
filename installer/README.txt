@@ -25,6 +25,23 @@ the stutter was gone. Ten mechs: 12 ms per tick with the mod; in the
 same scene the game's own solver needed 7 to 44 ms (median 11) for a
 single mech, every tick.
 
+Since 1.1 the mod also fixes two things that make the game stutter
+near big static builds (they are not physics, but one mod is easier
+to install than three):
+- Reflection probes. Every frame the camera moves, the game places its
+  reflection probes by sweeping a 32 m sphere 250 m down through the
+  world to find the ground height. Next to a build of tens of
+  thousands of parts that single query costs 40 to 50 ms, several
+  times per second. The mod uses an 8 m sphere instead: same purpose,
+  a few ms. Measured on a 49,000-part hall with Reflection Quality at
+  High + SSIL Ultra: frames longer than 33 ms went from 13-18 per five
+  seconds to none.
+- Bot navmesh. When the parts of a world cell are registered for the
+  bots' navigation mesh, each part walks the cell's whole list to
+  check that it is not there yet, only to feed a debug check that does
+  nothing in the released game. With thousands of parts in a cell that
+  is millions of comparisons; the mod skips it.
+
 
 INSTALL
 -------
@@ -68,6 +85,10 @@ Release\DLLModules\FastPhysics.ini (changes apply on the next start):
                         same). 0 solves every tick from scratch; it is
                         slower, there is no reason to change it.
   LogIntervalSeconds=30 How often a statistics line goes to the log.
+  ProbeSweepRadius=8    Radius of the reflection-probe placement sweep
+                        in metres (the game uses 32). 0 keeps the
+                        game's value.
+  NavMeshFix=1          0 leaves the navmesh registration as it is.
 
 Troubleshooting settings (Verify, MinRows, DumpFailures) are described
 in the ini file itself.

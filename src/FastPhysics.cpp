@@ -136,6 +136,53 @@ bool PatchPointer(void** slot, void* hook, void** original) {
     return WriteProtected(slot, &hook, sizeof(hook));
 }
 
+uint8_t* FindUnique(const Range& r, const uint8_t* sig, size_t size) {
+    uint8_t* first = FindBytes(r, sig, size, r.begin);
+    if (!first) return nullptr;
+    return FindBytes(r, sig, size, first + 1) ? nullptr : first;
+}
+
+// ---------------------------------------------------------------------------
+// Two small fixes for big static builds. They have nothing to do with the solver, they just live here
+// because one mod is easier to install than three.
+//
+//  - Reflection probes: every frame the camera moves, the probe generator finds the ground height under it
+//    by sweeping a 32 m sphere 250 m down through the physics world. Next to a build of tens of thousands of
+//    parts that one query costs 40-50 ms. A smaller sphere samples a narrower column and costs a few ms;
+//    the probes end up anchored to the ground right under the camera instead of the highest surface within
+//    32 m. ProbeSweepRadius is the radius in metres, 0 keeps the game's value.
+//  - Bot navmesh: when a cell's static boxes are registered, every box walks the cell's whole box list to
+//    check that its id is not there yet. The result only feeds a debug assert, and the walk is quadratic in
+//    the boxes per cell. NavMeshFix jumps over it.
+//
+// Both sites are found by a byte signature that must match exactly once; otherwise nothing is changed.
+// ---------------------------------------------------------------------------
+// xorps xmm0,xmm0 ; movaps [rbp],xmm0 ; mov dword ptr [rbp],32.0f ; mov qword ptr [rbp+0x10],32.0f
+const uint8_t kProbeSweepSig[] = {0x0F, 0x57, 0xC0, 0x0F, 0x29, 0x45, 0x00, 0xC7, 0x45, 0x00, 0x00, 0x00, 0x00, 0x42,
+                                  0x48, 0xC7, 0x45, 0x10, 0x00, 0x00, 0x00, 0x42};
+// mov rax,[rdi+18] ; mov rcx,[rdi+20] ; cmp rax,rcx ; je +31 ; mov rdx,[rbx] ; nop ; cmp [rax],rdx ; je +9 ; add rax,28 ; cmp rax,rcx ; jne -e
+const uint8_t kNavMeshSig[] = {0x48, 0x8B, 0x47, 0x18, 0x48, 0x8B, 0x4F, 0x20, 0x48, 0x3B, 0xC1, 0x74, 0x31, 0x48, 0x8B, 0x13,
+                               0x66, 0x90, 0x48, 0x39, 0x10, 0x74, 0x09, 0x48, 0x83, 0xC0, 0x28, 0x48, 0x3B, 0xC1, 0x75, 0xF2};
+int g_probeSweepRadius = 8, g_navMeshFix = 1;
+
+void PatchProbeSweep() {
+    if (g_probeSweepRadius <= 0 || g_probeSweepRadius >= 32) return;
+    uint8_t* at = FindUnique(g_text, kProbeSweepSig, sizeof kProbeSweepSig);
+    if (!at) { Log("probe sweep: signature not found or not unique, left as in the game"); return; }
+    float r = static_cast<float>(g_probeSweepRadius);
+    uint32_t bits;
+    memcpy(&bits, &r, 4);
+    if (WriteProtected(at + 10, &bits, 4) && WriteProtected(at + 18, &bits, 4)) Log("reflection probe placement sweep: sphere radius 32 -> %d m", g_probeSweepRadius);
+}
+
+void PatchNavMesh() {
+    if (!g_navMeshFix) return;
+    uint8_t* at = FindUnique(g_text, kNavMeshSig, sizeof kNavMeshSig);
+    if (!at) { Log("navmesh fix: signature not found or not unique, left as in the game"); return; }
+    const uint8_t jmp[] = {0xEB, 0x3C};   // where the je in the signature lands: past the walk and the assert
+    if (WriteProtected(at, jmp, sizeof jmp)) Log("navmesh static-box registration: duplicate search skipped");
+}
+
 LARGE_INTEGER g_freq;
 LONGLONG Now() { LARGE_INTEGER t; QueryPerformanceCounter(&t); return t.QuadPart; }
 double Ms(LONGLONG ticks) { return 1000.0 * static_cast<double>(ticks) / static_cast<double>(g_freq.QuadPart); }
@@ -374,15 +421,20 @@ void Init(HMODULE self) {
         g_logInterval = static_cast<int>(GetPrivateProfileIntW(L"FastPhysics", L"LogIntervalSeconds", 5, ini));
         if (g_logInterval < 1) g_logInterval = 1;
         g_dumpFailures = static_cast<int>(GetPrivateProfileIntW(L"FastPhysics", L"DumpFailures", 0, ini));
+        g_probeSweepRadius = static_cast<int>(GetPrivateProfileIntW(L"FastPhysics", L"ProbeSweepRadius", 8, ini));
+        g_navMeshFix = static_cast<int>(GetPrivateProfileIntW(L"FastPhysics", L"NavMeshFix", 1, ini));
     }
     if (g_dumpFailures && PathNextToModule(self, L"FastPhysics_fail.bin", path)) {
         g_failDump = CreateFileW(path, GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
     }
     g_verifyLeft = g_verify;
-    Log("FastPhysics %s loaded (enabled %d, warm start %d, verify %d, min rows %d)", FP_VERSION_STRING, g_enabled, g_warmStart, g_verify, g_minRows);
+    Log("FastPhysics %s loaded (enabled %d, warm start %d, verify %d, min rows %d, probe sweep radius %d, navmesh fix %d)",
+        FP_VERSION_STRING, g_enabled, g_warmStart, g_verify, g_minRows, g_probeSweepRadius, g_navMeshFix);
     if (!g_enabled) return;
-    if (!CpuSupportsAvx2Fma()) { Log("CPU without AVX2/FMA: FastPhysics disabled, the game keeps its own solver"); g_enabled = 0; return; }
     if (!InitSections(reinterpret_cast<uint8_t*>(GetModuleHandleW(nullptr)))) { Log("sections not found"); return; }
+    PatchProbeSweep();
+    PatchNavMesh();
+    if (!CpuSupportsAvx2Fma()) { Log("CPU without AVX2/FMA: the solver stays the game's own"); g_enabled = 0; return; }
     void** vt = FindVTable(".?AVbtDantzigSolver@@");
     if (!vt || !g_rdata.Contains(vt) || !g_text.Contains(vt[1])) { Log("btDantzigSolver vtable not found (%p), FastPhysics inactive", vt); return; }
     void* o;

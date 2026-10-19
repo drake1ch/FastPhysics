@@ -28,6 +28,21 @@ On one 45-body workshop mech (569-583 rows, 265 of them joints): game 10-14 ms p
 with AVX2 7 ms, this 1.0-1.3 ms warm / 1.5-2 ms cold. With six mechs in view the physics step went from 13 ms to
 7.6 ms per tick.
 
+## Also in the DLL since 1.1: two fixes for big static builds
+
+Not physics, but found with the same profiler and easier to ship in one mod:
+
+- **Reflection probe placement.** `ReflectionProbeGenerator::run` finds the ground height under the camera by
+  sweeping a 32 m `btSphereShape` 250 m down through the world (`PhysicsBase` cast, collision mask 0x89787),
+  every frame the camera moves. Against a 49k-part build that query costs 40-50 ms. The two immediates that
+  set the sphere radius are patched to `ProbeSweepRadius` (8 m by default): same purpose, a few ms, no frames
+  over 33 ms left in the test hall at the highest reflection setting.
+- **Navmesh static boxes.** `NavMesh.cpp` registers each box into its cells after a linear search of the cell's
+  box list for a duplicate id, which only feeds an assert. The search is jumped over.
+
+Both are byte signatures that must match exactly once; otherwise the DLL leaves the code alone and says so in
+the log. Both apply even on CPUs without AVX2 (the solver part then stays off).
+
 ## Layout
 
 - `src/FastPhysics.cpp` - the DLL: hook, settings, warm-start cache, stats, log

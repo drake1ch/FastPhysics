@@ -14,6 +14,7 @@ FastPhysics replaces that one routine with a faster implementation of the [i]sam
 [*]Big creations cost much less physics time. On a 45-part workshop mech the solver went from 10-14 ms to 1-3 ms per tick; with six mechs in view the physics step went from 13 ms to 7.6 ms and the stutter was gone; ten mechs run at 12 ms per tick, where the game's own solver needed 7-44 ms for every single mech.
 [*]Creations behave exactly as before: nothing gets softer, nothing sinks, nothing wobbles. The solver computes the same forces with the same method (Dantzig's method from the Bullet physics library the game is built on), only faster.
 [*]Nothing to configure. Install it and play.
+[*][b]Since 1.1:[/b] two fixes for stutter near big static builds (not physics, but one mod is easier than three). The game places its reflection probes by sweeping a 32 m sphere 250 m down through the world every frame the camera moves; next to a build of tens of thousands of parts that single query costs 40-50 ms, several times a second. The mod uses an 8 m sphere (ProbeSweepRadius in the ini, 0 = the game's value): on a 49,000-part hall at Reflection Quality "High + SSIL Ultra" frames longer than 33 ms went from 13-18 per five seconds to none. And when the bots' navmesh registers the parts of a world cell, a needless quadratic duplicate check that only feeds a debug assert is skipped.
 [/list]
 
 [size=4][b][color=#f7cb5d]What it does not do[/color][/b][/size]
